@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: restaurant-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  gateway-service:
+    build:
+      context: ../../backend/gateway-service
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      MENU_SERVICE_URL: http://menu-service:8082
+      ORDER_SERVICE_URL: http://order-service:8083
+      REVIEW_SERVICE_URL: http://review-service:8084
+      AI_GATEWAY_URL: http://ai-gateway:8000
+    depends_on:
+      - auth-service
+      - menu-service
+      - order-service
+      - review-service
+      - ai-gateway
+
+  auth-service:
+    build:
+      context: ../../backend/auth-service
+    ports:
+      - "${AUTH_SERVICE_PORT:-8081}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION_SECONDS: ${JWT_ACCESS_EXPIRATION_SECONDS:-3600}
+      JWT_REFRESH_EXPIRATION_SECONDS: ${JWT_REFRESH_EXPIRATION_SECONDS:-1209600}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+
+  menu-service:
+    build:
+      context: ../../backend/menu-service
+    ports:
+      - "${MENU_SERVICE_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+
+  order-service:
+    build:
+      context: ../../backend/order-service
+    ports:
+      - "${ORDER_SERVICE_PORT:-8083}:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+
+  review-service:
+    build:
+      context: ../../backend/review-service
+    ports:
+      - "${REVIEW_SERVICE_PORT:-8084}:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+
+  ai-gateway:
+    build:
+      context: ../../ai-backend/ai-gateway
+    ports:
+      - "${AI_GATEWAY_PORT:-8000}:8000"
+    environment:
+      PYTHON_ENV: ${PYTHON_ENV:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
